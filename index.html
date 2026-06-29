@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pastel Study Planner</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <canvas id="softCanvas"></canvas>
+
+  <div class="app">
+    <header>
+      <div class="title-wrap">
+        <h1>Pastel Study Planner</h1>
+        <p>Todo, 수업 필기, 서울 날씨·미세먼지, 환율 계산을 한 곳에서 관리하세요.</p>
+      </div>
+
+      <div>
+        <div class="toolbar app-tabs">
+          <button id="todoAppBtn" class="active">Todo List</button>
+          <button id="noteAppBtn">수업 필기</button>
+          <button id="weatherAppBtn">기온·미세먼지</button>
+          <button id="exchangeAppBtn">환율 계산기</button>
+        </div>
+
+        <div class="toolbar todo-only">
+          <button id="weekBtn">일주일 뷰</button>
+          <button id="monthBtn" class="active">한달 뷰</button>
+        </div>
+
+        <div class="sub-toolbar todo-only">
+          <button id="calendarModeBtn" class="active">달력 형식</button>
+          <button id="tableModeBtn">리스트/표 형식</button>
+        </div>
+      </div>
+    </header>
+
+    <section id="todoSection">
+      <main>
+        <section class="panel">
+          <div class="calendar-head">
+            <h2 id="calendarTitle"></h2>
+            <div class="nav">
+              <button class="ghost" id="prevBtn">이전</button>
+              <button class="ghost" id="todayBtn">오늘</button>
+              <button class="ghost" id="nextBtn">다음</button>
+            </div>
+          </div>
+
+          <div id="calendarView">
+            <div class="days-label">
+              <div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div>
+            </div>
+            <div class="calendar-grid" id="calendarGrid"></div>
+          </div>
+
+          <div id="tableView" class="table-view hidden">
+            <table>
+              <thead>
+                <tr>
+                  <th>날짜</th>
+                  <th>요일</th>
+                  <th>전체</th>
+                  <th>완료</th>
+                  <th>남음</th>
+                  <th>Todo</th>
+                </tr>
+              </thead>
+              <tbody id="todoTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <aside class="panel side">
+          <h3>Todo</h3>
+          <div class="selected-date" id="selectedDateText"></div>
+
+          <form id="todoForm">
+            <input id="todoInput" type="text" placeholder="할 일을 입력하세요" autocomplete="off" />
+            <button type="submit">추가</button>
+          </form>
+
+          <div class="todo-list" id="todoList"></div>
+
+          <div class="summary">
+            <div class="stat">
+              <strong id="totalCount">0</strong>
+              <span>전체</span>
+            </div>
+            <div class="stat">
+              <strong id="doneCount">0</strong>
+              <span>완료</span>
+            </div>
+            <div class="stat">
+              <strong id="leftCount">0</strong>
+              <span>남음</span>
+            </div>
+          </div>
+
+          <section class="excel-tools">
+            <div class="tools-head">
+              <h2>Excel 관리</h2>
+            </div>
+            <p>기간을 지정해 Todo를 엑셀 표로 다운로드하거나, 엑셀 파일을 업로드해 Todo를 갱신할 수 있습니다.</p>
+
+            <div class="range-grid">
+              <input id="startDate" type="date" />
+              <input id="endDate" type="date" />
+            </div>
+
+            <div class="toolbar excel-toolbar">
+              <button id="downloadExcelBtn" type="button">기간 Todo 엑셀 다운로드</button>
+              <label class="file-label" for="excelUpload">엑셀 업로드 갱신</label>
+              <input id="excelUpload" type="file" accept=".xlsx,.xls" />
+            </div>
+
+            <div class="hint">
+              업로드 엑셀의 열 이름은 <b>날짜</b>, <b>할일</b>, <b>완료</b>를 사용하세요.
+              완료 값은 TRUE, 완료, Y, 1 중 하나면 완료로 처리됩니다.
+            </div>
+          </section>
+        </aside>
+      </main>
+    </section>
+
+    <section id="noteSection" class="hidden">
+      <main class="note-layout">
+        <aside class="panel note-sidebar">
+          <div class="tools-head">
+            <h2>수업 필기</h2>
+          </div>
+
+          <form id="noteForm" class="note-form">
+            <input id="noteTitleInput" type="text" placeholder="수업 제목" autocomplete="off" />
+            <input id="noteSubjectInput" type="text" placeholder="과목명" autocomplete="off" />
+            <input id="noteDateInput" type="date" />
+            <textarea id="noteContentInput" placeholder="필기 내용을 입력하세요"></textarea>
+
+            <div class="toolbar note-actions">
+              <button type="submit" id="saveNoteBtn">노트 저장</button>
+              <button type="button" class="ghost" id="newNoteBtn">새 노트</button>
+            </div>
+          </form>
+
+          <div class="hint">
+            저장된 수업 필기는 브라우저 LocalStorage에 보관됩니다.
+          </div>
+        </aside>
+
+        <section class="panel note-main">
+          <div class="tools-head">
+            <h2>필기 목록</h2>
+            <input id="noteSearchInput" class="search-input" type="text" placeholder="제목, 과목, 내용 검색" />
+          </div>
+
+          <div class="summary note-summary">
+            <div class="stat">
+              <strong id="noteTotalCount">0</strong>
+              <span>전체 노트</span>
+            </div>
+            <div class="stat">
+              <strong id="noteSubjectCount">0</strong>
+              <span>과목 수</span>
+            </div>
+            <div class="stat">
+              <strong id="noteTodayCount">0</strong>
+              <span>오늘 작성</span>
+            </div>
+          </div>
+
+          <div id="noteList" class="note-list"></div>
+        </section>
+      </main>
+    </section>
+
+    <section id="weatherSection" class="hidden">
+      <main class="weather-layout">
+        <section class="panel weather-map-panel">
+          <div class="tools-head weather-head">
+            <div>
+              <h2>서울시 기온·미세먼지 지도</h2>
+              <p id="weatherUpdatedAt" class="weather-updated">데이터를 불러오는 중입니다.</p>
+            </div>
+            <div class="toolbar">
+              <button id="refreshWeatherBtn" type="button">지금 갱신</button>
+            </div>
+          </div>
+
+          <div class="weather-summary-grid">
+            <div class="stat">
+              <strong id="avgTemp">-</strong>
+              <span>평균 기온</span>
+            </div>
+            <div class="stat">
+              <strong id="avgPm25">-</strong>
+              <span>평균 PM2.5</span>
+            </div>
+            <div class="stat">
+              <strong id="avgPm10">-</strong>
+              <span>평균 PM10</span>
+            </div>
+          </div>
+
+          <div class="seoul-map-wrap">
+            <svg id="seoulMap" viewBox="0 0 900 560" role="img" aria-label="서울시 구별 날씨와 미세먼지 지도">
+              <defs>
+                <filter id="softShadow">
+                  <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#b8912d" flood-opacity="0.18"/>
+                </filter>
+              </defs>
+              <path class="han-river" d="M40,315 C170,260 250,370 380,320 C510,270 585,360 720,315 C805,288 850,300 880,315" />
+              <g id="districtMarkers"></g>
+            </svg>
+          </div>
+
+          <div class="hint">
+            Open-Meteo Forecast API와 Air Quality API를 사용합니다. 자동 갱신 주기는 5분입니다.
+            미세먼지는 PM2.5와 PM10 농도 기준으로 좋음/보통/나쁨/매우나쁨을 표시합니다.
+          </div>
+        </section>
+
+        <aside class="panel weather-detail-panel">
+          <h3 id="selectedDistrictName">서울 전체</h3>
+          <div id="selectedDistrictDetail" class="weather-detail">
+            지도에서 동네를 선택하면 상세 정보가 표시됩니다.
+          </div>
+
+          <div class="table-view weather-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>동네</th>
+                  <th>기온</th>
+                  <th>날씨</th>
+                  <th>PM2.5</th>
+                  <th>PM10</th>
+                </tr>
+              </thead>
+              <tbody id="weatherTableBody"></tbody>
+            </table>
+          </div>
+        </aside>
+      </main>
+    </section>
+  </div>
+
+    <section id="exchangeSection" class="hidden">
+      <main class="exchange-layout">
+        <section class="panel exchange-calculator-panel">
+          <div class="tools-head">
+            <div>
+              <h2>실시간 환율 계산기</h2>
+              <p class="weather-updated">한국수출입은행 환율 데이터를 사용합니다. API KEY는 브라우저에만 저장됩니다.</p>
+            </div>
+          </div>
+
+          <div class="exchange-key-box">
+            <label for="exchangeApiKeyInput">한국수출입은행 API KEY</label>
+            <div class="exchange-key-row">
+              <input id="exchangeApiKeyInput" type="password" placeholder="API KEY를 입력하세요" autocomplete="off" />
+              <button id="saveExchangeKeyBtn" type="button">키 저장</button>
+              <button id="clearExchangeKeyBtn" type="button" class="ghost">삭제</button>
+            </div>
+          </div>
+
+          <div class="exchange-date-grid">
+            <div>
+              <label for="exchangeBaseDate">기준 날짜</label>
+              <input id="exchangeBaseDate" type="date" />
+            </div>
+            <div>
+              <label for="exchangeCompareDate">비교 날짜</label>
+              <input id="exchangeCompareDate" type="date" />
+            </div>
+          </div>
+
+          <div class="exchange-converter">
+            <div>
+              <label for="exchangeAmount">금액</label>
+              <input id="exchangeAmount" type="number" min="0" step="0.01" value="100000" />
+            </div>
+            <div>
+              <label for="exchangeDirection">계산 방향</label>
+              <select id="exchangeDirection">
+                <option value="KRW_TO_FOREIGN">KRW → 외화</option>
+                <option value="FOREIGN_TO_KRW">외화 → KRW</option>
+              </select>
+            </div>
+            <div>
+              <label for="exchangeCurrency">통화</label>
+              <select id="exchangeCurrency">
+                <option value="USD">달러 USD</option>
+                <option value="JPY">엔화 JPY</option>
+                <option value="CNH">위안화 CNH</option>
+                <option value="EUR">유로 EUR</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="toolbar exchange-actions">
+            <button id="loadExchangeBtn" type="button">환율 불러오기·계산</button>
+          </div>
+
+          <div id="exchangeResult" class="exchange-result">
+            API KEY와 날짜를 입력한 뒤 환율을 불러오세요.
+          </div>
+
+          <div class="hint">
+            한국수출입은행 API는 영업일 기준 데이터가 제공될 수 있습니다. 선택 날짜에 데이터가 없으면 가까운 이전 영업일로 다시 조회해보세요.
+            JPY는 API에서 100엔 기준으로 제공되는 경우가 많아, 계산 시 1엔 기준으로 자동 환산합니다.
+          </div>
+        </section>
+
+        <aside class="panel exchange-table-panel">
+          <div class="tools-head">
+            <h2>날짜별 환율 비교</h2>
+          </div>
+
+          <div class="table-view exchange-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>통화</th>
+                  <th>기준 날짜 환율</th>
+                  <th>비교 날짜 환율</th>
+                  <th>변동률</th>
+                  <th>계산 결과</th>
+                </tr>
+              </thead>
+              <tbody id="exchangeTableBody">
+                <tr><td colspan="5">환율 데이터를 불러오면 비교표가 표시됩니다.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="exchange-rate-cards" id="exchangeRateCards"></div>
+        </aside>
+      </main>
+    </section>
+
+
+  <script src="script.js"></script>
+  <script src="note.js"></script>
+  <script src="weather.js"></script>
+  <script src="exchange.js"></script>
+</body>
+</html>
